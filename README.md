@@ -1,6 +1,3 @@
-# VOICE-RECOGNITION
-Real-time LLM voice guidance layer for the AstroMED medical storage kiosk -> mirrors WebSocket protocol events and guides crew through shelf registration, face recognition, and checkout via speech.
-
 # AstroMED VOICE
 
 **NASA HUNCH Medical Storage Management — LLM Voice Guidance Layer**
