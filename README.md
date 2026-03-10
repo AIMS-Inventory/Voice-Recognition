@@ -1,4 +1,3 @@
-```
 # VOICE-RECOGNITION
 Real-time LLM voice guidance layer for the NASA HUNCH AstroMED medical storage kiosk -> mirrors WebSocket protocol events and guides crew through shelf registration, face recognition, and checkout via speech.
 
@@ -38,7 +37,7 @@ The LLM is driven entirely by backend events. It does not respond to arbitrary c
 
 The frontend handles both **voice input and spoken output**, while coordinating with the backend through WebSocket events.
 
-**recog flow:**
+**Recognition Flow**
 
 1. The system listens for WebSocket events from the backend.
 2. Incoming events trigger **protocol handlers** in the interface.
@@ -61,10 +60,8 @@ Voice commands are captured using the **Web Speech API**:
 The interface communicates with the **Storage Management Backend** via WebSocket:
 
 ```
-
 ws://localhost:3000
-
-````
+```
 
 The backend provides real-time operational data and services including:
 
@@ -86,7 +83,7 @@ The backend provides real-time operational data and services including:
 The voice layer handles every state the backend can broadcast:
 
 | State | Trigger | Voice Guidance |
-|---|---|---|
+|------|------|------|
 | `boxEntered` | Sensor detects a new box | Asks crew to confirm registration |
 | `boxExited` | Box removed before registration | Acknowledges, confirms system ready |
 | `face_recognition_boxentry` | Identity check for box entry | Instructs crew to face the camera |
@@ -103,9 +100,19 @@ The voice layer handles every state the backend can broadcast:
 
 ### Primary LLM (Ollama — default)
 
-- https://ollama.com installed and running
-- Model pulled: `ollama pull gemma3:4b`
-- Server running: `ollama serve`
+- Ollama installed and running: https://ollama.com  
+- Model pulled:
+
+```
+ollama pull gemma3:4b
+```
+
+- Server running:
+
+```
+ollama serve
+```
+
 - CORS enabled if running on a separate machine
 
 ### Emergency LLM (WebLLM — optional)
@@ -129,19 +136,19 @@ The voice layer handles every state the backend can broadcast:
 
 ## Setup
 
-**1. Install and start Ollama**
+### 1. Install and start Ollama
 
 ```bash
 # Install from https://ollama.com
 ollama pull gemma3:4b
 ollama serve
-````
+```
 
-**2. Start the storage management backend**
+### 2. Start the storage management backend
 
 Refer to the main AstroMED repository for backend setup.
 
-**3. Open the voice interface**
+### 3. Open the voice interface
 
 Open `astro-med-voice.html` directly in Chrome or Edge. Grant microphone access when prompted — this happens once and is not requested again.
 
@@ -159,8 +166,8 @@ Open `astro-med-voice.html` directly in Chrome or Edge. Grant microphone access 
 
 Under normal operation crew speech is transcribed but only two input paths produce a response:
 
-* **Confirmation** — when a checkout is pending, say `yes` / `confirm` or `no` / `cancel`
-* **Emergency** — say `emergency` at any time to trigger the emergency protocol override
+- **Confirmation** — when a checkout is pending, say `yes` / `confirm` or `no` / `cancel`
+- **Emergency** — say `emergency` at any time to trigger the emergency protocol override
 
 All other speech is transcribed to the console. The LLM evaluates it and may respond in the console if the input is a relevant question about the system — but does not speak.
 
@@ -182,12 +189,12 @@ All vendor dependencies (Augmented UI, Google Fonts) are loaded from CDN. WebLLM
 Messages the voice layer listens for from the backend:
 
 ```
-boxEntered              { type, message: boxId }
-boxExited               { type }
-statusUpdate            { type, message: statusString }
-boxLocation             { type, message: shelfLocation }
-faceRecognitionUpdate   { type, message: crewName | "err_nodetect" | "err_multiple" }
-boxUpdate               { type } — triggers shelf data refresh from REST API
+boxEntered               { type, message: boxId }
+boxExited                { type }
+statusUpdate             { type, message: statusString }
+boxLocation              { type, message: shelfLocation }
+faceRecognitionUpdate    { type, message: crewName | "err_nodetect" | "err_multiple" }
+boxUpdate                { type }  — triggers shelf data refresh from REST API
 ```
 
 ---
@@ -195,6 +202,3 @@ boxUpdate               { type } — triggers shelf data refresh from REST API
 ## Part of NASA HUNCH
 
 This interface is a component of the AstroMED Medical Storage Management System, developed as part of the NASA High school students United with NASA to Create Hardware (HUNCH) program.
-
-```
-```
