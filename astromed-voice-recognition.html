@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AstroMED VOICE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/augmented-ui@1/augmented.css">
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Space Mono', monospace;
+            background: linear-gradient(135deg, #050609 0%, #0a0f18 100%);
+            color: #e5f5ff;
+            padding: 30px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-controls {
+            flex-shrink: 0;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            color: #ffffff;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(102, 252, 241, 0.3);
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 30px;
+            padding: 15px 20px;
+            background: #0c1118;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            --aug-tl: 12px; --aug-tr: 12px; --aug-bl: 12px; --aug-br: 12px;
+            --aug-border-all: 1px;
+            --aug-border-bg: linear-gradient(135deg, #66fcf1, #3b82f6);
+        }
+
+        .section-title {
+            font-size: 0.75em;
+            color: #8ea0c0;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 4px;
+        }
+
+        .status-value         { transition: color 0.3s ease; }
+        .status-value.online  { color: #20bf6b; }
+        .status-value.offline { color: #ef4444; }
+        .status-value.warn    { color: #f59e0b; }
+
+        .voice-section { text-align: center; }
+
+        .voice-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid #4b5563;
+            background: radial-gradient(circle, #1f2937, #020617);
+            color: #e5f5ff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .voice-button:hover {
+            box-shadow: 0 0 20px rgba(102, 252, 241, 0.6);
+        }
+
+        .voice-button.listening {
+            border-color: #20bf6b;
+            background: radial-gradient(circle, #059669, #022c22);
+            box-shadow: 0 0 30px rgba(32, 191, 107, 0.9);
+            animation: pulse-green 1.8s ease-in-out infinite;
+        }
+
+        .voice-button.awaiting {
+            border-color: #f59e0b;
+            background: radial-gradient(circle, #78350f, #020617);
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.7);
+            animation: pulse-amber 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 30px rgba(32, 191, 107, 0.9); }
+            50%       { box-shadow: 0 0 55px rgba(32, 191, 107, 1.0), 0 0 90px rgba(32, 191, 107, 0.35); }
+        }
+
+        @keyframes pulse-amber {
+            0%, 100% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.7); }
+            50%       { box-shadow: 0 0 45px rgba(245, 158, 11, 1.0), 0 0 70px rgba(245, 158, 11, 0.3); }
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-wrap input[type="checkbox"] {
+            appearance: none;
+            width: 28px;
+            height: 16px;
+            background: #1a2233;
+            border: 1px solid #2d3f55;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: border-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle-wrap input[type="checkbox"]::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #4b5563;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .toggle-wrap input[type="checkbox"]:checked { border-color: #66fcf1; }
+        .toggle-wrap input[type="checkbox"]:checked::after {
+            transform: translateX(12px);
+            background: #66fcf1;
+        }
+
+        .toggle-wrap.emergency input[type="checkbox"]:checked { border-color: #ef4444; }
+        .toggle-wrap.emergency input[type="checkbox"]:checked::after { background: #ef4444; }
+
+        .toggle-label {
+            font-size: 0.7em;
+            color: #2d3f55;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            transition: color 0.2s;
+        }
+
+        .toggle-wrap input[type="checkbox"]:checked ~ .toggle-label { color: #66fcf1; }
+        .toggle-wrap.emergency input[type="checkbox"]:checked ~ .toggle-label { color: #ef4444; }
+
+        .llm-console {
+            flex: 1;
+            background: #020617;
+            padding: 30px;
+            overflow: hidden;
+            --aug-tl: 25px; --aug-tr: 25px; --aug-bl: 25px; --aug-br: 25px;
+            --aug-border-all: 2px;
+            --aug-border-bg: linear-gradient(135deg, #66fcf1, #20bf6b);
+            --aug-inlay-all: 4px;
+            --aug-inlay-bg: #020617;
+        }
+
+        .llm-output {
+            height: 100%;
+            overflow-y: auto;
+            font-family: 'Space Mono', monospace;
+            font-size: 1.0em;
+            line-height: 1.6;
+            padding-right: 20px;
+        }
+
+        .llm-output::-webkit-scrollbar { width: 8px; }
+        .llm-output::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+
+        .prompt {
+            color: #66fcf1;
+            font-weight: 700;
+            margin-bottom: 6px;
+            text-shadow: 0 0 5px rgba(102, 252, 241, 0.4);
+        }
+
+        .prompt.interim { color: #4b6180; font-weight: 400; font-style: italic; }
+        .prompt.warn    { color: #f59e0b; text-shadow: none; }
+        .prompt.error   { color: #ef4444; text-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+
+        .response {
+            color: #e5f5ff;
+            margin-bottom: 14px;
+            padding: 12px 16px;
+            background: rgba(102, 252, 241, 0.05);
+            border-left: 3px solid #66fcf1;
+            border-radius: 4px;
+        }
+
+        .response.warn    { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.05); }
+        .response.error   { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.06); color: #fca5a5; }
+        .response.success { border-left-color: #20bf6b; background: rgba(32, 191, 107, 0.05); }
+
+        .model-progress {
+            margin-bottom: 14px;
+            padding: 12px 16px;
+            background: rgba(239, 68, 68, 0.03);
+            border-left: 3px solid #3a1a1a;
+            border-radius: 4px;
+        }
+
+        .model-progress-label {
+            color: #8ea0c0;
+            font-size: 0.8em;
+            margin-bottom: 6px;
+        }
+
+        .model-progress-track {
+            height: 3px;
+            background: #1e2a3a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .model-progress-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ef4444, #f59e0b);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .sys-log {
+            color: #2d3f55;
+            font-size: 0.76em;
+            line-height: 1.3;
+            margin-bottom: 2px;
+        }
+
+        .timestamp {
+            color: #1e2d3d;
+            font-size: 0.72em;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 15px; }
+            .llm-console {
+                padding: 20px;
+                --aug-tl: 15px; --aug-tr: 15px; --aug-bl: 15px; --aug-br: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-controls">
+        <h1>AstroMED VOICE</h1>
+
+        <div class="status-bar" data-augmented-ui="tl-clip tr-clip bl-clip br-clip border">
+            <div>
+                <div class="section-title">AI</div>
+                <div id="aiStatus" class="status-value warn">Connecting</div>
+            </div>
+            <div>
+                <div class="section-title">WebSocket</div>
+                <div id="wsStatus" class="status-value offline">Disconnected</div>
+            </div>
+            <div>
+                <div class="section-title">Voice</div>
+                <div id="voiceStatus" class="status-value">Stopped</div>
+            </div>
+            <div>
+                <div class="section-title">System</div>
+                <div id="systemStatus" class="status-value">Idle</div>
+            </div>
+            <div>
+                <div class="section-title">Commands</div>
+                <div id="cmdCount" class="status-value">0</div>
+            </div>
+        </div>
+
+        <div class="voice-section">
+            <button id="voiceBtn" class="voice-button">Live</button>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <label class="toggle-wrap emergency">
+            <input type="checkbox" id="emergencyLLM">
+            <span class="toggle-label">Emergency LLM</span>
+        </label>
+        <label class="toggle-wrap">
+            <input type="checkbox" id="debugToggle">
+            <span class="toggle-label">Debug</span>
+        </label>
+    </div>
+
+    <div class="llm-console" data-augmented-ui="tl-clip tr-clip bl-clip br-clip border">
+        <div id="llmOutput" class="llm-output">
+            <div class="prompt">&#9658; AstroMED VOICE initializing...</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // AstroMED Voice: protocol guidance layer
+    // Default LLM: Ollama local (gemma3:4b)
+    // Emergency LLM: WebLLM in-browser (Llama-3.2-1B) is toggled on demand, falls back to Ollama when disabled
+    // Voice input: only yes/no confirmation during active protocol steps, and emergency keyword
+    // All other speech is silently dropped so no LLM call, no console output
+
+    const OLLAMA_URL   = 'http://localhost:11434';
+    const OLLAMA_MODEL = 'gemma3:4b';
+    const WEBLLM_MODEL = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+    const WS_URL       = 'ws://localhost:3000';
+
+    const BASE_SYSTEM_PROMPT = `You are the AstroMED voice guidance system for a NASA HUNCH medical storage management kiosk.
+You speak directly to the crew member standing at the kiosk.
+
+HARD RULES:
+- You MUST NOT invent, assume, or hallucinate any box IDs, shelf locations, names, or values
+- You MUST ONLY reference values that appear explicitly in the DATA block
+- If a value in the DATA block is null or absent, do not mention it
+- Respond in one or two sentences maximum
+- Be direct and calm — this is a medical operations environment`;
+
+    const SPELL_CORRECTIONS = {
+        'register':  ['registrar', 'registry'],
+        'checkout':  ['check out', 'checking out', 'check-out'],
+        'shelf':     ['shelve', 'self'],
+        'confirm':   ['confirmed', 'confirming'],
+        'emergency': ['emerge and see', 'emergancy'],
+        'yes':       ['yeah', 'yep', 'yup', 'affirmative'],
+        'no':        ['nope', 'nah', 'negative']
+    };
+
+    //Live system state 
+    const systemState = {
+        status:           'idle',
+        enteringBoxId:    null,
+        shelfLocation:    null,
+        detectedFace:     null,
+        checkingOutShelf: null,
+        shelves:          []
+    };
+
+    //Runtime
+    let recognition          = null;
+    let micPermissionGranted = false;
+    let isListening          = false;
+    let isListeningEnabled   = false;
+    let commandCount         = 0;
+    let ws                   = null;
+    let awaitingVoiceConfirm = false;
+    let pendingVoiceAction   = null;
+
+    // WebLLM state
+    let webllmEngine         = null;
+    let webllmReady          = false;
+    let webllmLoading        = false;
+    let webllmQueue          = Promise.resolve();
+
+    //  DOM refs 
+    const voiceBtn       = document.getElementById('voiceBtn');
+    const llmOutput      = document.getElementById('llmOutput');
+    const aiStatusEl     = document.getElementById('aiStatus');
+    const wsStatusEl     = document.getElementById('wsStatus');
+    const voiceStatusEl  = document.getElementById('voiceStatus');
+    const sysStatusEl    = document.getElementById('systemStatus');
+    const cmdCountEl     = document.getElementById('cmdCount');
+    const debugToggle    = document.getElementById('debugToggle');
+    const emergencyLLMEl = document.getElementById('emergencyLLM');
+
+    // Console helpers 
+
+    function appendPrompt(text, cls) {
+        const d = document.createElement('div');
+        d.className   = 'prompt' + (cls ? ' ' + cls : '');
+        d.textContent = text;
+        llmOutput.appendChild(d);
+        llmOutput.scrollTop = llmOutput.scrollHeight;
+    }
+
+    function appendResponse(html, variant) {
+        const d = document.createElement('div');
+        d.className = 'response' + (variant ? ' ' + variant : '');
+        d.innerHTML = html;
+        llmOutput.appendChild(d);
+        llmOutput.scrollTop = llmOutput.scrollHeight;
+    }
+
+    function appendSysLog(msg) {
+        if (!debugToggle.checked) return;
+        const d = document.createElement('div');
+        d.className   = 'sys-log';
+        d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+        llmOutput.appendChild(d);
+        llmOutput.scrollTop = llmOutput.scrollHeight;
+    }
+
+    function appendTimestamp() {
+        const d = document.createElement('div');
+        d.className   = 'timestamp';
+        d.textContent = new Date().toLocaleTimeString();
+        llmOutput.appendChild(d);
+        llmOutput.scrollTop = llmOutput.scrollHeight;
+    }
+
+    // TTS 
+
+    function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate  = 0.92;
+        u.pitch = 1.0;
+        speechSynthesis.speak(u);
+    }
+
+    // LLM routing 
+    // Uses Ollama by default. If Emergency LLM toggle is on and WebLLM is ready, uses that instead.
+
+    function buildPrompt(task, extraData) {
+        const dataBlock = Object.assign({
+            status:           systemState.status,
+            enteringBoxId:    systemState.enteringBoxId,
+            shelfLocation:    systemState.shelfLocation,
+            detectedFace:     systemState.detectedFace,
+            checkingOutShelf: systemState.checkingOutShelf
+        }, extraData || {});
+
+        const cleanData = Object.fromEntries(
+            Object.entries(dataBlock).filter(([, v]) => v !== null && v !== undefined)
+        );
+
+        return {
+            system: BASE_SYSTEM_PROMPT
+                + '\n\nDATA (only these values exist — do not reference anything not listed here):\n'
+                + JSON.stringify(cleanData, null, 2),
+            task
+        };
+    }
+
+    async function callLLM(task, extraData) {
+        if (emergencyLLMEl.checked && webllmReady) {
+            return callWebLLM(task, extraData);
+        }
+        return callOllama(task, extraData);
+    }
+
+    // Ollama 
+
+    async function callOllama(task, extraData) {
+        const { system, task: t } = buildPrompt(task, extraData);
+        try {
+            const controller = new AbortController();
+            const timeout    = setTimeout(() => controller.abort(), 15000);
+            const res = await fetch(`${OLLAMA_URL}/api/generate`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model:   OLLAMA_MODEL,
+                    prompt:  system + '\n\n' + t,
+                    stream:  false,
+                    options: { temperature: 0.2, top_p: 0.8, num_predict: 40, num_ctx: 1024 }
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            return data.response.trim();
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                appendSysLog('Ollama timeout');
+            } else if (err.message.includes('Failed to fetch')) {
+                aiStatusEl.textContent = 'CORS Error';
+                aiStatusEl.className   = 'status-value offline';
+                appendSysLog('Ollama unreachable — run: ollama serve');
+            } else {
+                appendSysLog('Ollama error: ' + err.message);
+            }
+            return null;
+        }
+    }
+
+    async function testOllamaConnection() {
+        try {
+            const controller = new AbortController();
+            const timeout    = setTimeout(() => controller.abort(), 5000);
+            const res        = await fetch(`${OLLAMA_URL}/api/tags`, { signal: controller.signal });
+            clearTimeout(timeout);
+            if (res.ok) {
+                const data     = await res.json();
+                const hasModel = data.models?.some(m => m.name === OLLAMA_MODEL);
+                if (hasModel) {
+                    aiStatusEl.textContent = 'Online';
+                    aiStatusEl.className   = 'status-value online';
+                    appendSysLog('Ollama connected — ' + OLLAMA_MODEL + ' ready');
+                    return true;
+                }
+                aiStatusEl.textContent = 'No Model';
+                aiStatusEl.className   = 'status-value warn';
+                appendSysLog('Ollama running but ' + OLLAMA_MODEL + ' not found — run: ollama pull ' + OLLAMA_MODEL);
+                return false;
+            }
+            throw new Error('HTTP ' + res.status);
+        } catch (err) {
+            aiStatusEl.textContent = err.name === 'AbortError' ? 'Timeout' : 'Offline';
+            aiStatusEl.className   = 'status-value offline';
+            appendSysLog('Ollama offline — run: ollama serve');
+            return false;
+        }
+    }
+
+    // WebLLM 
+    // Loaded on demand when Emergency LLM toggle is switched on.
+    // Serialised through a queue to prevent concurrent WebGPU generations.
+
+    async function loadWebLLM() {
+        if (webllmReady || webllmLoading) return;
+        webllmLoading = true;
+
+        appendPrompt('\u25B6 Loading emergency LLM...', 'warn');
+        aiStatusEl.textContent = 'Loading WebLLM';
+        aiStatusEl.className   = 'status-value warn';
+
+        const progressWrap = document.createElement('div');
+        progressWrap.className = 'model-progress';
+        const label = document.createElement('div');
+        label.className = 'model-progress-label';
+        label.textContent = 'Downloading model...';
+        const track = document.createElement('div');
+        track.className = 'model-progress-track';
+        const fill = document.createElement('div');
+        fill.className = 'model-progress-fill';
+        track.appendChild(fill);
+        progressWrap.appendChild(label);
+        progressWrap.appendChild(track);
+        llmOutput.appendChild(progressWrap);
+        llmOutput.scrollTop = llmOutput.scrollHeight;
+
+        try {
+            // Dynamically import WebLLM only when needed
+            const webllm = await import('https://esm.run/@mlc-ai/web-llm');
+            webllmEngine = await webllm.CreateMLCEngine(WEBLLM_MODEL, {
+                initProgressCallback: (report) => {
+                    const pct = Math.round((report.progress || 0) * 100);
+                    fill.style.width  = pct + '%';
+                    label.textContent = report.text || ('Loading... ' + pct + '%');
+                    llmOutput.scrollTop = llmOutput.scrollHeight;
+                }
+            });
+
+            progressWrap.remove();
+            webllmReady   = true;
+            webllmLoading = false;
+            aiStatusEl.textContent = 'WebLLM Active';
+            aiStatusEl.className   = 'status-value warn';
+            appendPrompt('\u25B6 Emergency LLM active.', 'warn');
+            appendSysLog('WebLLM loaded: ' + WEBLLM_MODEL);
+
+        } catch (err) {
+            progressWrap.remove();
+            webllmLoading = false;
+            emergencyLLMEl.checked = false;
+            aiStatusEl.textContent = 'WL Failed';
+            aiStatusEl.className   = 'status-value offline';
+            appendPrompt('\u25B6 Emergency LLM failed to load: ' + err.message, 'error');
+            appendSysLog('WebLLM error: ' + err.message);
+            // Fall back to Ollama status check
+            await testOllamaConnection();
+        }
+    }
+
+    async function callWebLLM(task, extraData) {
+        if (!webllmReady) return null;
+        const { system, task: t } = buildPrompt(task, extraData);
+        webllmQueue = webllmQueue.then(async () => {
+            try {
+                const reply = await webllmEngine.chat.completions.create({
+                    messages: [
+                        { role: 'system', content: system },
+                        { role: 'user',   content: t }
+                    ],
+                    temperature: 0.2,
+                    top_p:       0.8,
+                    max_tokens:  40,
+                    stream:      false
+                });
+                return reply.choices[0].message.content.trim();
+            } catch (err) {
+                appendSysLog('WebLLM call error: ' + err.message);
+                return null;
+            }
+        });
+        return webllmQueue;
+    }
+
+    // Emergency LLM toggle handler
+    emergencyLLMEl.addEventListener('change', async () => {
+        if (emergencyLLMEl.checked) {
+            await loadWebLLM();
+        } else {
+            // Restore Ollama as active engine
+            aiStatusEl.textContent = 'Switching...';
+            aiStatusEl.className   = 'status-value warn';
+            appendPrompt('\u25B6 Restoring local LLM...');
+            await testOllamaConnection();
+        }
+    });
+
+    // Tracks the last time speak() was called — back-to-back protocol events
+    // (e.g. statusUpdate immediately followed by faceRecognitionUpdate) can cause
+    // the TTS to fire twice in quick succession. A 2s cooldown prevents that.
+    let lastSpeakAt = 0;
+
+    function speakOnce(text) {
+        const now = Date.now();
+        if (now - lastSpeakAt < 2000) return;
+        lastSpeakAt = now;
+        speak(text);
+    }
+
+    // Protocol event handlers 
+
+    async function onBoxDetected(boxId) {
+        appendPrompt('\u25B6 Box detected: ' + boxId);
+        const g = await callLLM(
+            'A new box has been detected by the sensor. Ask the crew member if they want to register it.',
+            { enteringBoxId: boxId }
+        );
+        if (g) { appendResponse(g); speakOnce(g); }
+    }
+
+    async function onBoxExited() {
+        appendPrompt('\u25B6 Box removed from sensor field.');
+        const g = await callLLM(
+            'The box was removed before registration completed. Acknowledge and confirm the system is ready.',
+            {}
+        );
+        if (g) { appendResponse(g); speakOnce(g); }
+    }
+
+    async function onStatusUpdate(newStatus) {
+        sysStatusEl.textContent = newStatus.replace(/_/g, ' ').toUpperCase();
+        appendSysLog('Status: ' + newStatus);
+
+        const tasks = {
+            face_recognition_boxentry: 'Face recognition has started for box entry. Tell the crew member to look directly at the camera.',
+            face_recognition_boxexit:  'Face recognition has started for checkout. Tell the crew member to look directly at the camera.',
+            shelves_full:              'All shelves are full. Tell the crew member they must wait until a shelf becomes available.',
+            multiple_boxes:            'Multiple boxes are in frame. Tell the crew member to remove extra boxes until only one is visible to the sensor.'
+        };
+
+        const task    = tasks[newStatus];
+        const variant = (newStatus === 'shelves_full' || newStatus === 'multiple_boxes') ? 'warn' : null;
+        if (task) {
+            const g = await callLLM(task, {});
+            if (g) { appendResponse(g, variant); speakOnce(g); }
+        }
+    }
+
+    async function onFaceRecognitionUpdate(result) {
+        systemState.detectedFace = result;
+
+        if (result === 'err_nodetect') {
+            appendPrompt('\u25B6 No face detected.', 'warn');
+            const g = await callLLM(
+                'Face recognition failed because no face was detected. Tell the crew member to position their face in front of the camera.',
+                { detectedFace: 'err_nodetect' }
+            );
+            if (g) { appendResponse(g, 'warn'); speakOnce(g); }
+
+        } else if (result === 'err_multiple') {
+            appendPrompt('\u25B6 Multiple faces detected.', 'warn');
+            const g = await callLLM(
+                'Face recognition failed because multiple faces were detected. Tell the crew member only they should be in front of the camera.',
+                { detectedFace: 'err_multiple' }
+            );
+            if (g) { appendResponse(g, 'warn'); speakOnce(g); }
+
+        } else {
+            appendPrompt('\u25B6 Identity recognized: ' + result);
+            const g = await callLLM(
+                'Face recognition returned a crew member name. Confirm the name shown and tell them to press Continue if correct.',
+                { detectedFace: result }
+            );
+            if (g) { appendResponse(g); speakOnce(g); }
+        }
+    }
+
+    async function onShelfLocationReceived(location) {
+        appendPrompt('\u25B6 Shelf assigned: ' + location);
+        const g = await callLLM(
+            'The box has been registered and assigned a shelf location. Tell the crew member to place the box at the assigned shelf. State the shelf location by name.',
+            { shelfLocation: location }
+        );
+        if (g) { appendResponse(g, 'success'); speakOnce(g); }
+    }
+
+    async function onCheckoutInitiated(shelfTag) {
+        appendPrompt('\u25B6 Checkout initiated — shelf: ' + shelfTag);
+        awaitingVoiceConfirm = true;
+        pendingVoiceAction   = { type: 'checkout', shelf: shelfTag };
+        voiceBtn.classList.add('awaiting');
+
+        const g = await callLLM(
+            'A checkout has been initiated. Ask the crew member to say yes to confirm or no to cancel. State the shelf location.',
+            { checkingOutShelf: shelfTag }
+        );
+        if (g) { appendResponse(g, 'warn'); speakOnce(g); }
+    }
+
+    async function onCheckoutConfirmed(shelfTag) {
+        appendPrompt('\u25B6 Checkout confirmed — shelf: ' + shelfTag);
+        const g = await callLLM(
+            'The crew member confirmed the checkout. Acknowledge it is processing and tell them to wait.',
+            { checkingOutShelf: shelfTag }
+        );
+        if (g) { appendResponse(g, 'success'); speakOnce(g); }
+    }
+
+    // WebSocket 
+
+    function connectWebSocket() {
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            wsStatusEl.textContent = 'Connected';
+            wsStatusEl.className   = 'status-value online';
+            appendSysLog('WebSocket connected — ' + WS_URL);
+        };
+
+        ws.onmessage = async (e) => {
+            let msg;
+            try   { msg = JSON.parse(e.data); }
+            catch { appendSysLog('Malformed WS message'); return; }
+
+            appendSysLog('recv: ' + msg.type + (msg.message !== undefined ? ' — ' + msg.message : ''));
+
+            switch (msg.type) {
+                case 'boxEntered':
+                    systemState.enteringBoxId = msg.message;
+                    systemState.status        = 'boxEntered';
+                    await onBoxDetected(msg.message);
+                    break;
+                case 'boxExited':
+                    systemState.enteringBoxId = null;
+                    systemState.status        = 'idle';
+                    await onBoxExited();
+                    break;
+                case 'statusUpdate':
+                    systemState.status = msg.message;
+                    await onStatusUpdate(msg.message);
+                    break;
+                case 'boxLocation':
+                    systemState.shelfLocation = msg.message;
+                    systemState.status        = 'location_received';
+                    await onShelfLocationReceived(msg.message);
+                    break;
+                case 'faceRecognitionUpdate':
+                    await onFaceRecognitionUpdate(msg.message);
+                    break;
+                case 'boxUpdate':
+                    fetch('http://localhost:8000/getShelves')
+                        .then(r => r.json())
+                        .then(json => { systemState.shelves = json.shelves || []; })
+                        .catch(() => {});
+                    break;
+            }
+        };
+
+        ws.onclose = () => {
+            wsStatusEl.textContent = 'Disconnected';
+            wsStatusEl.className   = 'status-value offline';
+            appendSysLog('WebSocket closed — reconnecting in 3s');
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        ws.onerror = () => {
+            appendSysLog('WebSocket error');
+            ws.close();
+        };
+    }
+
+    // Voice 
+    // Three behaviors only:
+    // 1. Awaiting confirmation — yes/no intercepted, anything else prompts again, nothing reaches LLM
+    // 2. Emergency keyword — always fires regardless of state
+    // 3. Everything else — silently dropped, no console output, no LLM call
+
+    function autoCorrect(text) {
+        let out = text.toLowerCase();
+        for (const [correct, variants] of Object.entries(SPELL_CORRECTIONS)) {
+            for (const v of variants) {
+                const esc = v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                out = out.replace(new RegExp('\\b' + esc + '\\b', 'gi'), correct);
+            }
+        }
+        return out;
+    }
+
+    function isYes(t) { return /\b(yes|confirm|affirmative|proceed|correct|yep|yeah)\b/.test(t); }
+    function isNo(t)  { return /\b(no|cancel|abort|negative|nope|nah|stop)\b/.test(t); }
+
+    async function handleVoiceInput(text) {
+        const lower = text.toLowerCase();
+
+        // Path 1 — confirmation gate
+        if (awaitingVoiceConfirm && pendingVoiceAction) {
+            if (isYes(lower)) {
+                awaitingVoiceConfirm = false;
+                voiceBtn.classList.remove('awaiting');
+                if (pendingVoiceAction.type === 'checkout') {
+                    await onCheckoutConfirmed(pendingVoiceAction.shelf);
+                }
+                pendingVoiceAction = null;
+                return;
+            }
+            if (isNo(lower)) {
+                awaitingVoiceConfirm = false;
+                voiceBtn.classList.remove('awaiting');
+                pendingVoiceAction   = null;
+                appendResponse('Action canceled.');
+                speak('Action canceled.');
+                return;
+            }
+            // Unrecognised during confirmation — re-prompt via TTS only, nothing written to console
+            speak('Please say yes or no.');
+            return;
+        }
+
+        // Path 2 — emergency keyword
+        if (lower.includes('emergency')) {
+            appendPrompt('\u25B6 EMERGENCY OVERRIDE', 'error');
+            const g = await callLLM(
+                'The crew member declared an emergency. State that emergency protocol is active and ground control is being notified.',
+                {}
+            );
+            appendResponse(g || 'EMERGENCY PROTOCOL ACTIVE — Ground control notified.', 'error');
+            speak(g || 'Emergency protocol activated. Ground control has been notified.');
+            return;
+        }
+
+        // Path 3 — off-protocol input gets a console-only LLM response, no TTS
+        const g = await callLLM(
+            'A crew member said: "' + text + '". ' +
+            'If this is a genuine question or request relevant to the storage system or current protocol state, respond helpfully in one sentence. ' +
+            'If this is noise, filler, or off-topic, reply with exactly: IGNORE',
+            {}
+        );
+        if (!g || g.trim().toUpperCase() === 'IGNORE') return;
+        appendResponse(g);
+        // No speak() call — console only for off-protocol responses
+    }
+
+    // Mic + Speech Recognition 
+    // Permission requested once via getUserMedia before the recognition object is created.
+    // The stream is stopped immediately — we only need the browser permission grant.
+    // The recognition object is created once and reused across all start/stop cycles.
+
+    async function requestMicPermission() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => t.stop());
+            micPermissionGranted = true;
+            appendSysLog('Microphone permission granted');
+            return true;
+        } catch (err) {
+            appendPrompt('\u25B6 Microphone access denied. Voice input unavailable.', 'warn');
+            voiceStatusEl.textContent = 'No Access';
+            voiceStatusEl.className   = 'status-value offline';
+            return false;
+        }
+    }
+
+    function initSpeechRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            appendPrompt('\u25B6 Speech recognition not supported in this browser.', 'warn');
+            voiceStatusEl.textContent = 'Unsupported';
+            voiceStatusEl.className   = 'status-value offline';
+            return false;
+        }
+
+        recognition = new SR();
+        recognition.continuous      = true;
+        recognition.interimResults  = true;
+        recognition.lang            = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            isListening               = true;
+            voiceStatusEl.textContent = 'Live';
+            voiceStatusEl.className   = 'status-value online';
+            voiceBtn.classList.add('listening');
+            voiceBtn.textContent      = 'Stop';
+        };
+
+        recognition.onresult = async (event) => {
+            let interim = '';
+            let final   = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) final   += event.results[i][0].transcript;
+                else                          interim  += event.results[i][0].transcript;
+            }
+
+            if (interim && !final) {
+                const prev = llmOutput.querySelector('.prompt.interim');
+                if (prev) prev.remove();
+                const d = document.createElement('div');
+                d.className   = 'prompt interim';
+                d.textContent = '\u25B6 ' + interim + '...';
+                llmOutput.appendChild(d);
+                llmOutput.scrollTop = llmOutput.scrollHeight;
+            }
+
+            if (final) {
+                const prev = llmOutput.querySelector('.prompt.interim');
+                if (prev) prev.remove();
+                const corrected = autoCorrect(final).trim();
+                appendPrompt('\u25B6 ' + corrected);
+                appendTimestamp();
+                commandCount++;
+                cmdCountEl.textContent = commandCount;
+                await handleVoiceInput(corrected);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            if (event.error === 'not-allowed') {
+                appendPrompt('\u25B6 Microphone permission denied.', 'warn');
+                isListeningEnabled   = false;
+                voiceBtn.textContent = 'Live';
+                voiceBtn.classList.remove('listening');
+            } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                appendSysLog('Speech error: ' + event.error);
+            }
+            isListening = false;
+        };
+
+        recognition.onend = () => {
+            isListening = false;
+            if (isListeningEnabled) {
+                setTimeout(() => {
+                    if (isListeningEnabled && !isListening) {
+                        try   { recognition.start(); }
+                        catch (e) { appendSysLog('Restart: ' + e.message); }
+                    }
+                }, 200);
+            } else {
+                voiceStatusEl.textContent = 'Stopped';
+                voiceStatusEl.className   = 'status-value';
+                voiceBtn.classList.remove('listening');
+                voiceBtn.textContent      = 'Live';
+            }
+        };
+
+        return true;
+    }
+
+    voiceBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        isListeningEnabled = !isListeningEnabled;
+        if (isListeningEnabled) {
+            try { recognition.start(); }
+            catch (err) {
+                if (!err.message.includes('already started')) {
+                    appendSysLog('Mic start error: ' + err.message);
+                    isListeningEnabled   = false;
+                    voiceBtn.textContent = 'Live';
+                }
+            }
+        } else {
+            recognition.stop();
+            voiceBtn.classList.remove('awaiting');
+            voiceBtn.textContent = 'Live';
+        }
+    });
+
+    // Startup 
+
+    async function init() {
+        sysStatusEl.textContent = 'Initializing';
+
+        // Mic permission first — single browser prompt, recognition object created after
+        const micOk = await requestMicPermission();
+        if (micOk) initSpeechRecognition();
+
+        connectWebSocket();
+        await testOllamaConnection();
+
+        sysStatusEl.textContent = 'Ready';
+        appendPrompt('\u25B6 Ready. Press Live to enable voice input.');
+    }
+
+    init();
+</script>
+</body>
+</html>
