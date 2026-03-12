@@ -355,18 +355,22 @@ HARD RULES:
         'shelf':     ['shelve', 'self'],
         'confirm':   ['confirmed', 'confirming'],
         'emergency': ['emerge and see', 'emergancy'],
+        'capture':   ['cap tour', 'captur', 'picture'],
+        'pill':      ['pills', 'pil', 'build'],
         'yes':       ['yeah', 'yep', 'yup', 'affirmative'],
         'no':        ['nope', 'nah', 'negative']
     };
 
-    //Live system state 
+    //Live voice system state 
     const systemState = {
         status:           'idle',
         enteringBoxId:    null,
         shelfLocation:    null,
         detectedFace:     null,
         checkingOutShelf: null,
-        shelves:          []
+        shelves:          [],
+        pillScanResult:   [],    // [{pill_type, quantity}, ...]
+        pillScanCaptured: false
     };
 
     //Runtime
@@ -451,11 +455,13 @@ HARD RULES:
             enteringBoxId:    systemState.enteringBoxId,
             shelfLocation:    systemState.shelfLocation,
             detectedFace:     systemState.detectedFace,
-            checkingOutShelf: systemState.checkingOutShelf
+            checkingOutShelf: systemState.checkingOutShelf,
+            pillScanCaptured: systemState.pillScanCaptured || undefined,
+            pillScanResult:   systemState.pillScanResult.length ? systemState.pillScanResult : undefined
         }, extraData || {});
 
         const cleanData = Object.fromEntries(
-            Object.entries(dataBlock).filter(([, v]) => v !== null && v !== undefined)
+            Object.entries(dataBlock).filter(([, v]) => v !== null && v !== undefined && v !== false)
         );
 
         return {
@@ -636,7 +642,7 @@ HARD RULES:
     });
 
     // Tracks the last time speak() was called — back-to-back protocol events
-    // (e.g. statusUpdate immediately followed by faceRecognitionUpdate) can cause
+    // (ex. statusUpdate immediately followed by faceRecognitionUpdate) can cause
     // the TTS to fire twice in quick succession. A 2s cooldown prevents that.
     let lastSpeakAt = 0;
 
@@ -675,12 +681,16 @@ HARD RULES:
             face_recognition_boxentry: 'Face recognition has started for box entry. Tell the crew member to look directly at the camera.',
             face_recognition_boxexit:  'Face recognition has started for checkout. Tell the crew member to look directly at the camera.',
             shelves_full:              'All shelves are full. Tell the crew member they must wait until a shelf becomes available.',
-            multiple_boxes:            'Multiple boxes are in frame. Tell the crew member to remove extra boxes until only one is visible to the sensor.'
+            multiple_boxes:            'Multiple boxes are in frame. Tell the crew member to remove extra boxes until only one is visible to the sensor.',
+            pill_checkup:              null  // handled by dedicated onPillCheckupStarted
         };
 
         const task    = tasks[newStatus];
         const variant = (newStatus === 'shelves_full' || newStatus === 'multiple_boxes') ? 'warn' : null;
-        if (task) {
+
+        if (newStatus === 'pill_checkup') {
+            await onPillCheckupStarted();
+        } else if (task) {
             const g = await callLLM(task, {});
             if (g) { appendResponse(g, variant); speakOnce(g); }
         }
@@ -746,6 +756,50 @@ HARD RULES:
         if (g) { appendResponse(g, 'success'); speakOnce(g); }
     }
 
+    async function onBoxEnterCanceled() {
+        appendPrompt('\u25B6 Box entry canceled.');
+        systemState.enteringBoxId = null;
+        systemState.status        = 'idle';
+        const g = await callLLM(
+            'The box entry was canceled by the system. Acknowledge and confirm the system is back to idle.',
+            {}
+        );
+        if (g) { appendResponse(g); speakOnce(g); }
+    }
+
+    async function onPillCheckupStarted() {
+        appendPrompt('\u25B6 Pill verification required.');
+        systemState.pillScanResult   = [];
+        systemState.pillScanCaptured = false;
+        const g = await callLLM(
+            'The system has entered pill verification mode. Tell the crew member to point the camera at the pills inside the box and then press Capture Pills on the screen.',
+            {}
+        );
+        if (g) { appendResponse(g, 'warn'); speakOnce(g); }
+    }
+
+    async function onPillScanResult(pills) {
+        systemState.pillScanResult   = pills;
+        systemState.pillScanCaptured = true;
+
+        if (!pills || pills.length === 0) {
+            appendPrompt('\u25B6 Pill scan: no pills detected.', 'warn');
+            const g = await callLLM(
+                'The pill scan captured no pills. Tell the crew member no pills were detected and they should re-capture or adjust the camera angle.',
+                { pillScanResult: [], pillScanCaptured: true }
+            );
+            if (g) { appendResponse(g, 'warn'); speakOnce(g); }
+        } else {
+            const summary = pills.map(p => p.quantity + 'x ' + p.pill_type).join(', ');
+            appendPrompt('\u25B6 Pill scan result: ' + summary);
+            const g = await callLLM(
+                'The pill scan completed successfully. Read out the detected pills and quantities, then tell the crew member to confirm or re-capture on screen.',
+                { pillScanResult: pills, pillScanCaptured: true }
+            );
+            if (g) { appendResponse(g, 'success'); speakOnce(g); }
+        }
+    }
+
     // WebSocket 
 
     function connectWebSocket() {
@@ -770,6 +824,9 @@ HARD RULES:
                     systemState.status        = 'boxEntered';
                     await onBoxDetected(msg.message);
                     break;
+                case 'boxEnterCancel':
+                    await onBoxEnterCanceled();
+                    break;
                 case 'boxExited':
                     systemState.enteringBoxId = null;
                     systemState.status        = 'idle';
@@ -777,6 +834,11 @@ HARD RULES:
                     break;
                 case 'statusUpdate':
                     systemState.status = msg.message;
+                    // Reset pill state on any status change unless staying in pill_checkup
+                    if (msg.message !== 'pill_checkup') {
+                        systemState.pillScanResult   = [];
+                        systemState.pillScanCaptured = false;
+                    }
                     await onStatusUpdate(msg.message);
                     break;
                 case 'boxLocation':
@@ -786,6 +848,9 @@ HARD RULES:
                     break;
                 case 'faceRecognitionUpdate':
                     await onFaceRecognitionUpdate(msg.message);
+                    break;
+                case 'pillScanResult':
+                    await onPillScanResult(msg.pills);
                     break;
                 case 'boxUpdate':
                     fetch('http://localhost:8000/getShelves')
@@ -1024,4 +1089,4 @@ HARD RULES:
     init();
 </script>
 </body>
-</html>
+</html> 
