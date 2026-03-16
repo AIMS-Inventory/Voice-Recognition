@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AstroMED VOICE</title>
+    <title>AIMS VOICE</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
@@ -278,7 +278,7 @@
 <div class="container">
 
     <div class="top-controls">
-        <h1>AstroMED VOICE</h1>
+        <h1>AIMS VOICE</h1>
 
         <div class="status-bar" data-augmented-ui="tl-clip tr-clip bl-clip br-clip border">
             <div>
@@ -321,14 +321,14 @@
 
     <div class="llm-console" data-augmented-ui="tl-clip tr-clip bl-clip br-clip border">
         <div id="llmOutput" class="llm-output">
-            <div class="prompt">&#9658; AstroMED VOICE initializing...</div>
+            <div class="prompt">&#9658; AIMS VOICE initializing...</div>
         </div>
     </div>
 
 </div>
 
 <script>
-    // AstroMED Voice: protocol guidance layer
+    // AIMS Voice: protocol guidance layer
     // Default LLM: Ollama local (gemma3:4b)
     // Emergency LLM: WebLLM in-browser (Llama-3.2-1B) is toggled on demand, falls back to Ollama when disabled
     // Voice input: only yes/no confirmation during active protocol steps, and emergency keyword
@@ -339,7 +339,7 @@
     const WEBLLM_MODEL = 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
     const WS_URL       = 'ws://localhost:3000';
 
-    const BASE_SYSTEM_PROMPT = `You are the AstroMED voice guidance system for a NASA HUNCH medical storage management kiosk.
+    const BASE_SYSTEM_PROMPT = `You are the AIMS voice guidance system for a NASA HUNCH medical storage management kiosk.
 You speak directly to the crew member standing at the kiosk.
 
 HARD RULES:
